@@ -1,7 +1,7 @@
 # 2048 Game written using the Pygame module
 # 
-# Lewis Deane
-# 23/12/2014
+# Hanh Van Pham
+# 01/03/2018
 
 import pygame, sys, time
 import os.path
@@ -12,6 +12,8 @@ from random import *
 TOTAL_POINTS = 0
 DEFAULT_SCORE = 2
 BOARD_SIZE = 4
+
+BREAK_TIME = 0.5
 
 pygame.init()
 
@@ -24,60 +26,54 @@ scorefont = pygame.font.SysFont("monospace", 50)
 tileMatrix = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
 undoMat = []
 
-def main(fromLoaded = False):
+def playGame(solver, challenger=None):
+    for i in range(2):
+        placeRandomTile()
+    printMatrix()
 
-	if not fromLoaded:
-		placeRandomTile()
-		placeRandomTile()
+    while checkIfCanGo() == True:
+        key = solver.getAction(tileMatrix)
+        
+        assert isArrow(key)
+        rotations = getRotations(key)
 
-	printMatrix()
+        for i in range(0, rotations):
+            rotateMatrixClockwise()
 
-	while True:
-		for event in pygame.event.get():
-			if event.type == QUIT:
-				pygame.quit()
-				sys.exit()
+        if not canMove():
+            for j in range(0, (4 - rotations) % 4):
+                rotateMatrixClockwise()
+            continue
 
-			if checkIfCanGo() == True:
-				if event.type == KEYDOWN:
-					if isArrow(event.key):
-						rotations = getRotations(event.key)
+        moveTiles()
+        mergeTiles()
+            
+        for j in range(0, (4 - rotations) % 4):
+            rotateMatrixClockwise()
 
-						addToUndo()
+        if challenger != None:
+            x, y, k = challenger.getNewTile(tileMatrix)
+            assert 0 <= x and x < BOARD_SIZE
+            assert 0 <= y and y < BOARD_SIZE
+            assert k == 2 or k == 4
+            assert tileMatrix[x][y] == 0
+            tileMatrix[x][y] = k
+        else:
+            placeRandomTile()
 
-						for i in range(0, rotations):
-							rotateMatrixClockwise()
+        printMatrix()
 
-						if canMove():
-							moveTiles()
-							mergeTiles()
-							placeRandomTile()
+        pygame.display.update()
+        time.sleep(BREAK_TIME)
 
-						for j in range(0, (4 - rotations) % 4):
-							rotateMatrixClockwise()
+    printGameOver()
+    pygame.display.update()
 
-						printMatrix()
-			else:
-				printGameOver()
-
-			if event.type == KEYDOWN:
-				global BOARD_SIZE
-
-				if event.key == pygame.K_r:
-					reset()
-
-				if 50 < event.key and 56 > event.key:
-					BOARD_SIZE = event.key - 48
-					reset()
-
-				if event.key == pygame.K_s:
-					saveGameState()
-				elif event.key == pygame.K_l:
-					loadGameState()
-				elif event.key == pygame.K_u:
-					undo()
-
-		pygame.display.update()
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
 
 def printMatrix():
 	SURFACE.fill(BLACK)
@@ -114,11 +110,9 @@ def printGameOver():
 
 	label = scorefont.render("Game Over!", 1, (255,255,255))
 	label2 = scorefont.render("Score: " + str(TOTAL_POINTS), 1, (255,255,255))
-	label3 = myfont.render("Press r to restart!", 1, (255,255,255))
 
 	SURFACE.blit(label, (150, 100))
 	SURFACE.blit(label2, (150, 300))
-	SURFACE.blit(label3, (150, 500))
 
 def placeRandomTile():
 	count = 0
@@ -179,7 +173,7 @@ def reset():
 
 	tileMatrix = [[0 for i in range(0, BOARD_SIZE)] for j in range(0, BOARD_SIZE)]
 
-	main()
+	playGame()
 
 def canMove():
 	for i in range(0, BOARD_SIZE):
@@ -219,7 +213,7 @@ def loadGameState():
 
 		f.close()
 
-		main(True)
+		playGame(True)
 
 def rotateMatrixClockwise():
 	for i in range(0, int(BOARD_SIZE/2)):
@@ -272,4 +266,3 @@ def undo():
 
 		printMatrix()
 
-main()

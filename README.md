@@ -3,23 +3,14 @@ A python implementation of the popular game 2048. Playable on your desktop with 
 
 ## Download
 
-Simply download the two files in this repository.
+Clone/Fork this repository ot your computer to start developing. And then create pull requests to submit your code.
 
 ## Usage
 
-Navigate to where you saved the two python files in your command prompt.
-Now just run 'python 2048.py' and then the application will launch.
+Run 'python 2048_manual.py' to play the game manually.
+See 'random_solver.py' and 'random_challenger.py' to see the format of agents. Write your agent in a separate file using the same format as those two files. Then change the file '2048_auto.py' appropriately to test your agents. Run 'python 2048_auto.py' to run the autoplay. All other files should not be changed.
 
 ## Playing the Game
 
 Standard 2048 rules apply.
 
-Pressing the 'S' key on your keyboard will save the current game data.
-
-Pressing the 'L' key on your keyboard will load any saved game data.
-
-Pressing the 'U' key on your keyboard will undo a previous move, this can be done infinitely until you are back to your first move.
-
-Pressing the 'R' key on your keyboard will reset the game.
-
-To change the playable grid size press a number from 3 to 7 on your keyboard and it will set the grid to DxD where D is the number you pressed.
