@@ -1,6 +1,6 @@
 # import the gameplay function, solver and challenger classes
 from gameplay import playGame
-from random_solver import RandomSolver as Solver
+from cpp_solver import CppSolver as Solver
 from random_challenger import RandomChallenger as Challenger
 
 # initialize the solver and challenger
