@@ -1,6 +1,7 @@
 #include "gameplay.h"
 
-int numState;
+int numState, numTurn;
+set<StateMask> recentStates;
 
 class Agent {
 public:
@@ -14,13 +15,14 @@ public:
 
     long long heuristic(StateMask state) {
         int res = 0;
-        REP(i, 4) REP(j, 4) if (VALUE(state, i, j) != 0) {
-            if (i + 1 < 4 && VALUE(state, i + 1, j) != 0)
-                res += VALUE(state, i, j) != VALUE(state, i + 1, j);
-            if (j + 1 < 4 && VALUE(state, i, j + 1) != 0)
-                res += VALUE(state, i, j) != VALUE(state, i, j + 1);
+        REP(i, 4) REP(j, 4) {
+            int a = VALUE(state, i, j);
+            REP(k, 4) if (INSIDE(i + dx[k], j + dy[k])) {
+                int b = VALUE(state, i + dx[k], j + dy[k]);
+                res += (a - b) * (a - b);
+            }
         }
-        return res;
+        return -res;
     }
 
     long long findWorstInsertion(StateMask state, int depth, int baseScore,
@@ -48,7 +50,7 @@ public:
         numState++;
 
         long long best = minExpect;
-        int bestMove = -1;
+        int bestMove = 0;
 
         long long choices[4];
         REP(dir, 4) choices[dir] = (getMove(state, dir).se << 2) ^ dir;
@@ -60,16 +62,31 @@ public:
 
             if (outcome.fi == state) continue;
 
-            long long worstCase = findWorstInsertion(outcome.fi, depth + 1, baseScore + outcome.se, best, maxExpect);
+            long long worstCase = findWorstInsertion(outcome.fi, depth + 1, baseScore + outcome.se, best - (depth == 0), maxExpect);
+//            if (depth == 0) printf("dir %c gives %lld\n", DIR[dir], worstCase);
             if (worstCase >= maxExpect && depth > 0) return maxExpect;
             if (best < worstCase) {
                 best = worstCase;
-                bestMove = dir;
-            }
+                bestMove = MASK(dir);
+            } else if (best == worstCase) bestMove |= MASK(dir);
         }
 
-        if (bestMove < 0) return depth;
-        else return depth == 0 ? bestMove : best;
+        if (bestMove == 0) return depth;
+        if (depth > 0) return best;
+
+//        printf("%d best choices\n", __builtin_popcount(bestMove));
+
+        long long worstInsertion[4];
+        memset(worstInsertion, 0x3f, sizeof worstInsertion);
+        REP(dir, 4) if (BIT(bestMove, dir)) {
+            StateMask newState = getMove(state, dir).fi;
+            REP(cell, 16) if (HEXA_BIT(newState, cell) == 0) FOR(value, 1, 2)
+                minimize(worstInsertion[dir], heuristic(insertTile(newState, cell, value)));
+        }
+        best = -INF;
+        REP(dir, 4) if (BIT(bestMove, dir)) maximize(best, worstInsertion[dir]);
+        REP(dir, 4) if (BIT(bestMove, dir) && best == worstInsertion[dir]) return dir;
+        assert(false);
     }
 
     char getNextMove(StateMask state) {
@@ -79,7 +96,6 @@ public:
             numState = 0;
             int id = findBestMove(state, 0);
             if (limitDepth + 2 > MAX_LIMIT_DEPTH || numState >= NUM_STATE) {
-                printf("depth %d ", limitDepth);
                 return DIR[id];
             }
             limitDepth += 2;
@@ -87,8 +103,7 @@ public:
     }
 };
 
-const int TRICKY_STATE[4][4] = {{4, 4, 256, 2}, {32, 4, 8, 32}, {16, 512, 128, 2}, {4, 2048, 4, 16}};
-StateMask getMask(const int board[4][4]) {
+StateMask getMask(int board[4][4]) {
     StateMask res = 0;
     REP(i, 4) REP(j, 4) REP(k, 20) if (MASK(k) == board[i][j])
         res |= (1ULL * k) << (4 * POS(i, j));
@@ -97,18 +112,18 @@ StateMask getMask(const int board[4][4]) {
 
 Agent agent;
 int main(int argc, char* argv[]) {
-    srand(220797);
-
-    if (argv != NULL && argv[1] != NULL) {
-        string number(argv[1]);
-        StateMask state = 0;
-        FORE(it, number) state = state * 10 + *it - '0';
-        char res = agent.getNextMove(state);
-        fprintf(stderr, "Num states: %d\n", numState);
-        return getDir(res);
+    while (true) {
+        numTurn++;
+        int board[4][4];
+        REP(i, 4) REP(j, 4) {
+            assert(cin >> board[i][j]);
+            if (board[i][j] < 0) {
+                fprintf(stderr, "%d turns, %d states visited\n", numTurn, (int)recentStates.size());
+                exit(EXIT_SUCCESS);
+            }
+        }
+        cout << getDir(agent.getNextMove(getMask(board))) << endl;
     }
 
-//    GameController<Agent> controller(&agent);
-//    controller.playGame();
-    return 0;
+    return 1;
 }

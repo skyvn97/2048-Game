@@ -2,9 +2,11 @@
 from gameplay import playGame
 from cpp_solver import CppSolver as Solver
 from random_challenger import RandomChallenger as Challenger
+import sys
 
 # initialize the solver and challenger
-solver = Solver()
+
+solver = Solver(sys.argv[1])
 challenger = Challenger()
 
 # play the game

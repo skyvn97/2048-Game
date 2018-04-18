@@ -33,6 +33,9 @@ template<class T>
 
 /** END OF TEMPLATE - ACTUAL SOLUTION COMES HERE **/
 
+const int dx[] = {0, 1, 0, -1};
+const int dy[] = {1, 0, -1, 0};
+
 const char DIR[] = "<^>v";
 int getDir(char c) {
     REP(i, 4) if (DIR[i] == c) return i;
@@ -43,7 +46,7 @@ typedef unsigned long long StateMask;
 #define HEXA_MASK(i) MASK((i) << 2)
 #define HEXA_BIT(x, i) (((x) >> ((i) << 2)) & 15)
 
-#define POS(x, y) ((x) * 4 + (y))
+#define POS(x, y) (((x) << 2) ^ (y))
 #define ROW(id) ((id) >> 2)
 #define COL(id) ((id) & 3)
 
@@ -52,7 +55,7 @@ typedef unsigned long long StateMask;
 #define INSIDE(x, y) ((x) >= 0 && (x) < 4 && (y) >= 0 && (y) < 4)
 
 StateMask getRow(StateMask mask, int id) {
-    return (mask >> (id * 16)) & (MASK(16) - 1);
+    return (mask >> (id << 4)) & (MASK(16) - 1);
 }
 
 string printRow(StateMask mask) {
@@ -91,14 +94,14 @@ pair<StateMask, int> moveLeft(StateMask row) {
     }
 
     StateMask res = 0;
-    REP(i, 4) res |= (1ULL * values[i]) << (4 * i);
+    REP(i, 4) res |= (1ULL * values[i]) << (i << 2);
 //    printf("From '%s' to '%s' gains %d points\n", printRow(row).c_str(), printRow(res).c_str(), score);
     return make_pair(res, score);
 }
 
 StateMask rotateLeft(StateMask mask) {
     StateMask res = 0;
-    REP(i, 4) REP(j, 4) res |= VALUE(mask, i, j) << (4 * POS(3 - j, i));
+    REP(i, 4) REP(j, 4) res |= VALUE(mask, i, j) << (POS(3 ^ j, i) << 2);
     return res;
 }
 
@@ -109,7 +112,7 @@ pair<StateMask, int> getMove(StateMask mask, int dir) {
     StateMask newBoard = 0;
     REP(i, 4) {
         pair<StateMask, int> tmp = moveLeft(getRow(board, i));
-        newBoard |= tmp.fi << (16 * i);
+        newBoard |= tmp.fi << (i << 4);
         score += tmp.se;
     }
 
@@ -173,6 +176,11 @@ public:
             state = tmp.fi;
 
             genMoreTile();
+
+            if (numTurn % 10 == 0) {
+                printf("Num turn: %d\n", numTurn);
+                printBoard(state);
+            }
         }
 
         printf("GAME OVER!\n");

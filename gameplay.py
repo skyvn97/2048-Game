@@ -13,7 +13,7 @@ TOTAL_POINTS = 0
 DEFAULT_SCORE = 2
 BOARD_SIZE = 4
 
-BREAK_TIME = 0.5
+BREAK_TIME = 0.1
 
 pygame.init()
 

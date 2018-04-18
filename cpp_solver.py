@@ -1,5 +1,6 @@
 import pygame
-from subprocess import call
+import subprocess
+import sys
 from random import randint
 from classes import SolvingAgent
 
@@ -13,21 +14,63 @@ def getLog(value):
         if value == (1 << i):
             return i
 
-def getState(tileMatrix):
-    # print(tileMatrix)
-    state = 0
-    for i in range(BOARD_SIZE):
-        for j in range(BOARD_SIZE):
-            state |= getLog(tileMatrix[i][j]) << ((4 * j + i) << 2)
-    return state
-
 class CppSolver(SolvingAgent):
+    def __init__(self, cmd):
+        try:
+            self.process = subprocess.Popen(cmd, 
+                                            stdin=subprocess.PIPE, 
+                                            stdout=subprocess.PIPE, 
+                                            stderr=subprocess.PIPE, 
+                                            bufsize=1, 
+                                            universal_newlines=True)
+        except Exception as ex:
+            print("Command '%s' failed to start. Error: " % (cmd))
+            print(ex)
+            sys.exit(-1)
+
+    def __del__(self):
+        print("-1", file=self.process.stdin)
+        if self.process.poll() is None:
+            print("Waiting for process to finish...")
+            self.process.wait()
+        self.printProcessResult()
+
+    def printProcessResult(self):
+        print("Process exited with exit status %d" % (self.process.returncode))
+        stderr_output = self.process.stderr.read()
+        if stderr_output:
+            print("Standard error: ")
+            sys.stdout.write(stderr_output)
+        else:
+            print("Standard error is empty.")
+
+    def checkProcessExit(self):
+        if self.process.poll() is not None:
+            print("ERROR: Process exited unexpectedly!")
+            self.printProcessResult()
+            sys.exit(-1)
+
+    def readOutput(self):
+        self.checkProcessExit()
+        try:
+            token = self.process.stdout.readline()
+            move = int(token)
+            if (move < 0) or (move > 3):
+                raise Exception()
+        except:
+            self.checkProcessExit()
+            print("ERROR: Unexpected token '%s'" % (token))
+            sys.exit(-1)
+
+        return move
+        
     # this function receives the tileMatrix as a BOARD_SIZE x BOARD_SIZE array
     # returns one of the four values in VALID_ACTIONS corresponding to the moving direction 
     def getAction(self, tileMatrix):
-        state = getState(tileMatrix)
-        # print("Send state %d" % (state))
-        move = call(["./solving_agent/alphabeta", str(state)])
-        # print("Receive move %d" % (move))
-        return VALID_ACTIONS[move]
+        for col in range(BOARD_SIZE):
+            for row in range(BOARD_SIZE):
+                print("%d " % (tileMatrix[row][col]), file=self.process.stdin)
+            print("\n", file=self.process.stdin)
 
+        move = self.readOutput()
+        return VALID_ACTIONS[move]
