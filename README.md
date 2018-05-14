@@ -1,16 +1,27 @@
 # 2048-Game
-A python implementation of the popular game 2048. Playable on your desktop with some neat features. To run this you will need python and pygame installed.
+This repository contains several AI agents playing the popular game 2048. A python implementation written by lewisjdeane is used to support graphics viewing. Playable on your desktop with some neat features. To run this you will need python and pygame installed.
 
 ## Download
 
 Clone/Fork this repository ot your computer to start developing. And then create pull requests to submit your code.
 
+## What is included?
+Inside the solving_agent folder, we have
+
+- Two agents solving the game using AI based algorithms: Alphabeta prunning and Expectimax
+
+- Two agents solving the game using Reinforcement learning models.
+
+- One smart challenger generating new tiles for the purpose of hinder the solver.
+
+- One challenger generating normally
+
+Also, we have an implemetation written in python originally by lewisjdeane, has been modified to adapt our aim of auto playing.
+
 ## Usage
 
-Run 'python 2048_manual.py' to play the game manually.
-See 'random_solver.py' and 'random_challenger.py' to see the format of agents. Write your agent in a separate file using the same format as those two files. Then change the file '2048_auto.py' appropriately to test your agents. Run 'python 2048_auto.py' to run the autoplay. All other files should not be changed.
+Only AI based agents are compatible with the python implementation. To watch the game, run 'python3 2048_auto.py' with 2 parameters: The commandline to execute the solving agent and the command line to execute the challenging agent.
 
-## Playing the Game
+For example, to see expectimax plays against random insertion, run: 'python3 2048_auto.py ./solving_agent/expectimax ./solving_agent/random_challenger'
 
-Standard 2048 rules apply.
-
+Run './alphabeta_interactive --practice' to let the agent plays multiple game and produce the results (for analyzing purpose). The same feature applies for expectimax.
