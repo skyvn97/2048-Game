@@ -4,4 +4,4 @@ class SolvingAgent:
 
 class ChallengingAgent:
     def getNewTile(self, tileMatrix):
-        raise NotImplementedError("getTile not implemented")
+        raise NotImplementedError("getNewTile not implemented")

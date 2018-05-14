@@ -8,6 +8,9 @@
 #define se   second
 #define MASK(i) (1ULL << (i))
 #define BIT(x, i) (((x) >> (i)) & 1)
+#define SQR(x) (1LL * (x) * (x))
+#define IS_INF(x) (std::isinf(x))
+#define IS_NAN(x) (std::isnan(x))
 #define div   ___div
 #define next   ___next
 #define prev   ___prev
@@ -17,12 +20,20 @@
 #define __builtin_popcount __builtin_popcountll
 using namespace std;
 template<class X, class Y>
-    void minimize(X &x, const Y &y) {
-        if (x > y) x = y;
+    bool minimize(X &x, const Y &y) {
+        X eps = 1e-9;
+        if (x > y + eps) {
+            x = y;
+            return true;
+        } else return false;
     }
 template<class X, class Y>
-    void maximize(X &x, const Y &y) {
-        if (x < y) x = y;
+    bool maximize(X &x, const Y &y) {
+        X eps = 1e-9;
+        if (x + eps < y) {
+            x = y;
+            return true;
+        } else return false;
     }
 template<class T>
     T Abs(const T &x) {
@@ -35,7 +46,6 @@ template<class T>
 
 const int dx[] = {0, 1, 0, -1};
 const int dy[] = {1, 0, -1, 0};
-
 const char DIR[] = "<^>v";
 int getDir(char c) {
     REP(i, 4) if (DIR[i] == c) return i;
@@ -53,6 +63,13 @@ typedef unsigned long long StateMask;
 #define VALUE(state, x, y) HEXA_BIT(state, POS(x, y))
 
 #define INSIDE(x, y) ((x) >= 0 && (x) < 4 && (y) >= 0 && (y) < 4)
+
+StateMask getMaskFromBoard(const int board[4][4]) {
+    StateMask res = 0;
+    REP(i, 4) REP(j, 4) REP(k, 20) if ((int)MASK(k) == board[i][j])
+        res |= (1ULL * k) << (4 * POS(i, j));
+    return res;
+}
 
 StateMask getRow(StateMask mask, int id) {
     return (mask >> (id << 4)) & (MASK(16) - 1);
@@ -72,9 +89,16 @@ string printRow(StateMask mask) {
 }
 
 void printBoard(StateMask mask) {
-    printf("___BOARD___\n");
-    REP(i, 4) cout << printRow(getRow(mask, i)) << endl;
-    printf("___END___\n");
+    cerr << "___BOARD___\n";
+    REP(i, 4) cerr << printRow(getRow(mask, i)) << endl;
+    cerr << "___END___" << endl;
+}
+
+int totalValue(StateMask mask) {
+    int res = 0;
+    REP(row, 4) REP(col, 4) if (VALUE(mask, row, col) > 0)
+        res += MASK(VALUE(mask, row, col));
+    return res;
 }
 
 pair<StateMask, int> moveLeft(StateMask row) {
@@ -83,7 +107,7 @@ pair<StateMask, int> moveLeft(StateMask row) {
     bool merged = false;
     int score = 0;
     REP(i, 4) if (HEXA_BIT(row, i) > 0) {
-        if (col >= 0 && values[col] == HEXA_BIT(row, i) && !merged) {
+        if (col >= 0 && values[col] == (int)HEXA_BIT(row, i) && !merged) {
             values[col]++;
             merged = true;
             score += MASK(values[col]);
@@ -105,7 +129,15 @@ StateMask rotateLeft(StateMask mask) {
     return res;
 }
 
-pair<StateMask, int> getMove(StateMask mask, int dir) {
+StateMask flipAllRows(StateMask mask) {
+    StateMask res = 0;
+    REP(i, 4) REP(j, 4) res |= VALUE(mask, i, j) << (POS(i, 3 ^ j) << 2);
+    return res;
+}
+
+pair<StateMask, int> getStateAfterMoveSLOW(StateMask mask, int dir) {
+    assert(false);
+
     StateMask board = mask;
     REP(love, dir) board = rotateLeft(board);
     int score = 0;
@@ -125,70 +157,105 @@ pair<StateMask, int> getMove(StateMask mask, int dir) {
     return make_pair(newBoard, score);
 }
 
-StateMask insertTile(StateMask mask, int pos, int val) {
-    assert(HEXA_BIT(mask, pos) == 0);
-    return mask | ((1ULL * val) << (4 * pos));
+pair<StateMask, int> getStateAfterMove(StateMask mask, int dir) {
+    StateMask newMask = 0;
+    int score = 0;
+
+    // LEFT
+    if (dir == 0) {
+        REP(row, 4) {
+            StateMask last = 0;
+            int pos = -1;
+            REP(col, 4) if (VALUE(mask, row, col) > 0) {
+                if (VALUE(mask, row, col) == last) {
+                    newMask ^= (last ^ (last + 1)) << (POS(row, pos) << 2);
+                    score += MASK(last + 1);
+                    last = 0;
+                } else {
+                    last = VALUE(mask, row, col);
+                    newMask ^= last << (POS(row, ++pos) << 2);
+                }
+            }
+        }
+    }
+
+    // UP
+    if (dir == 1) {
+        REP(col, 4) {
+            StateMask last = 0;
+            int pos = -1;
+            REP(row, 4) if (VALUE(mask, row, col) > 0) {
+                if (VALUE(mask, row, col) == last) {
+                    newMask ^= (last ^ (last + 1)) << (POS(pos, col) << 2);
+                    score += MASK(last + 1);
+                    last = 0;
+                } else {
+                    last = VALUE(mask, row, col);
+                    newMask ^= last << (POS(++pos, col) << 2);
+                }
+            }
+        }
+    }
+
+    // RIGHT
+    if (dir == 2) {
+        REP(row, 4) {
+            StateMask last = 0;
+            int pos = 4;
+            FORD(col, 3, 0) if (VALUE(mask, row, col) > 0) {
+                if (VALUE(mask, row, col) == last) {
+                    newMask ^= (last ^ (last + 1)) << (POS(row, pos) << 2);
+                    score += MASK(last + 1);
+                    last = 0;
+                } else {
+                    last = VALUE(mask, row, col);
+                    newMask ^= last << (POS(row, --pos) << 2);
+                }
+            }
+        }
+    }
+
+    // DOWN
+    if (dir == 3) {
+        REP(col, 4) {
+            StateMask last = 0;
+            int pos = 4;
+            FORD(row, 3, 0) if (VALUE(mask, row, col) > 0) {
+                if (VALUE(mask, row, col) == last) {
+                    newMask ^= (last ^ (last + 1)) << (POS(pos, col) << 2);
+                    score += MASK(last + 1);
+                    last = 0;
+                } else {
+                    last = VALUE(mask, row, col);
+                    newMask ^= last << (POS(--pos, col) << 2);
+                }
+            }
+        }
+    }
+    return make_pair(newMask, score);
 }
 
-template<class Agent> class GameController {
-public:
-    Agent *agent;
-    int totScore, numTurn;
-    StateMask state;
+int getDirFromState(StateMask from, StateMask to) {
+    REP(dir, 4) if (getStateAfterMove(from, dir).fi == to) return dir;
+    assert(false);
+}
 
-    GameController(Agent *agent = NULL) {
-        this->agent = agent;
-        totScore = numTurn = 0;
-        state = 0;
-    }
+StateMask insertTile(StateMask mask, int pos, int val) {
+    assert(HEXA_BIT(mask, pos) == 0);
+    return mask | ((1ULL * val) << (pos << 2));
+}
 
-    char findMove(void) {
-        if (agent == NULL) {
-            string input; cin >> input;
-            return input[0];
-        }
-        return agent->getNextMove(state);
-    }
+StateMask endGame(StateMask state) {
+    REP(dir, 4) if (getStateAfterMove(state, dir).fi != state) return false;
+    return true;
+}
 
-    bool endGame(void) {
-        REP(i, 4) if (getMove(state, i).fi != state) return false;
-        return true;
-    }
-    void genMoreTile(void) {
-        vector<int> cells;
-        REP(i, 4) REP(j, 4) if (VALUE(state, i, j) == 0) cells.push_back(POS(i, j));
-        assert(!cells.empty());
-        state = insertTile(state, cells[rand() % cells.size()], rand() % 2 + 1);
-    }
-    pair<StateMask, int> playGame(void) {
-        if (state == 0) genMoreTile();
-        while (!endGame()) {
-            int mv = getDir(findMove());
-            pair<StateMask, int> tmp = getMove(state, mv);
-            if (state == tmp.fi) {
-                printf("INVALID MOVE");
-                printf("Total score: %d\n", totScore);
-                printf("Number of turns: %d\n", numTurn);
-                exit(EXIT_FAILURE);
-            }
-            totScore += tmp.se;
-            numTurn++;
-            state = tmp.fi;
-
-            genMoreTile();
-
-            if (numTurn % 10 == 0) {
-                printf("Num turn: %d\n", numTurn);
-                printBoard(state);
-            }
-        }
-
-        printf("GAME OVER!\n");
-        printf("Total score: %d\n", totScore);
-        printf("Number of turns: %d\n", numTurn);
-        printBoard(state);
-        return make_pair(state, totScore);
-    }
-};
+int cellID[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, -1};
+StateMask randomInsert(StateMask state) {
+    random_shuffle(cellID, cellID + 16);
+    REP(i, 16) if (HEXA_BIT(state, cellID[i]) == 0)
+        return insertTile(state, cellID[i], rand() % 2 + 1);
+    assert(false);
+}
 
 /*** LOOK AT MY CODE. MY CODE IS AMAZING :D ***/
