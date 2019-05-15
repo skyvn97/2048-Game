@@ -1,6 +1,6 @@
 # import the gameplay function, solver and challenger classes
 from gameplay import playGame
-from cpp_solver import CppSolver as Solver
+from py_solver import PySolver as Solver
 from cpp_challenger import CppChallenger as Challenger
 import sys
 
